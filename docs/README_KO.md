@@ -23,7 +23,7 @@ claude mcp add daily-news \
 ### OpenClaw
 
 ```bash
-cp -r openclaw-skill/daily-news ~/.openclaw/skills/
+cp -r openclaw-skill/daily-news ~/.openclaw/skills/6551-daily-news
 ```
 
 ---
