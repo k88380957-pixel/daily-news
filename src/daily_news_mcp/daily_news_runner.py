@@ -1,1 +1,94 @@
-import requests\nimport schedule\nimport time\nfrom telegram import Bot\n\n# Constants\nAPI_URL = 'https://api.coingecko.com/api/v3/news'  # Example API for crypto news\nTELEGRAM_TOKEN = 'your-telegram-bot-token'\nCHAT_ID = 'your-chat-id'\n\n# Function to fetch crypto news\ndef fetch_crypto_news():\n    response = requests.get(API_URL)\n    news = response.json()  # Assuming the response is JSON\n    return news\n\n# Function to summarize news using Gemini, OpenAI or any summarization API\ndef summarize_news(news):\n    # This is a placeholder for summarization logic\n    summarized = ' '.join([item['title'] for item in news])  # Example summarization\n    return summarized\n\n# Function to send messages via Telegram\ndef send_to_telegram(message):\n    bot = Bot(token=TELEGRAM_TOKEN)\n    bot.send_message(chat_id=CHAT_ID, text=message)\n\n# Job function to fetch, summarize and send news\ndef job():\n    news = fetch_crypto_news()\n    summarized_news = summarize_news(news)\n    send_to_telegram(summarized_news)\n\n# Schedule the job at 09:00, 14:00, and 22:00\nschedule.every().day.at('09:00').do(job)\nschedule.every().day.at('14:00').do(job)\nschedule.every().day.at('22:00').do(job)\n\n# Main execution loop\nif __name__ == '__main__':\n    while True:\n        schedule.run_pending()\n        time.sleep(60)  # wait one minute\n
+import asyncio
+import json
+import os
+import logging
+from typing import List
+
+from daily_news_mcp.api_client import NewsAPIClient
+from daily_news_mcp.telegram_client import TelegramClient
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+async def run_news_task():
+    """
+    Main task to fetch news and send to Telegram.
+    """
+    # Load configuration
+    config_path = "config_runtime.json"
+    if os.path.exists(config_path):
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    else:
+        # Fallback to environment variables
+        config = {
+            "telegram_bot_token": os.environ.get("TELEGRAM_TOKEN"),
+            "telegram_chat_id": os.environ.get("TELEGRAM_CHAT_ID"),
+            "news_categories": ["crypto"], # Default category
+            "api_base_url": os.environ.get("DAILY_NEWS_API_BASE", "https://ai.6551.io")
+        }
+
+    token = config.get("telegram_bot_token")
+    chat_id = config.get("telegram_chat_id")
+    categories = config.get("news_categories", ["crypto"])
+    api_base_url = config.get("api_base_url", "https://ai.6551.io")
+
+    if not token or not chat_id:
+        logger.error("Telegram token or chat ID not found in configuration.")
+        return
+
+    logger.info(f"Starting news task for categories: {categories}")
+    
+    api_client = NewsAPIClient(base_url=api_base_url)
+    tg_client = TelegramClient(token=token)
+
+    try:
+        all_news_summary = "📰 *今日新闻推送* 📰\n\n"
+        
+        for category in categories:
+            logger.info(f"Fetching hot news for category: {category}")
+            try:
+                news_data = await api_client.get_free_hot(category=category)
+                if news_data.get("success") and news_data.get("data"):
+                    items = news_data["data"][:5]  # Get top 5 items
+                    all_news_summary += f"🔹 *{category.upper()} 热门新闻*\n"
+                    for item in items:
+                        title = item.get("title", "No Title")
+                        # Some items might have 'description' or 'summary'
+                        desc = item.get("description") or item.get("summary") or ""
+                        if desc:
+                            # Truncate description if too long
+                            desc = (desc[:100] + '...') if len(desc) > 100 else desc
+                            all_news_summary += f"• *{title}*\n_{desc}_\n"
+                        else:
+                            all_news_summary += f"• *{title}*\n"
+                    all_news_summary += "\n"
+                else:
+                    logger.warning(f"No news found for category: {category}")
+            except Exception as e:
+                logger.error(f"Error fetching news for {category}: {e}")
+
+        if all_news_summary.strip() == "📰 *今日新闻推送* 📰":
+            all_news_summary += "暂时没有获取到最新新闻。"
+
+        # Send to Telegram
+        logger.info("Sending summary to Telegram...")
+        resp = tg_client.send_message(chat_id=chat_id, text=all_news_summary)
+        
+        if resp.get("ok"):
+            logger.info("News sent successfully!")
+        else:
+            logger.error(f"Failed to send news: {resp}")
+
+    finally:
+        await api_client.close()
+
+if __name__ == "__main__":
+    # Set PYTHONPATH to include src directory
+    import sys
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    
+    asyncio.run(run_news_task())
