@@ -2,10 +2,10 @@ name: Daily News
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # 09:00 UTC+8
-    - cron: '0 6 * * *'   # 14:00 UTC+8
-    - cron: '0 14 * * *'  # 22:00 UTC+8
-  workflow_dispatch:  # 手动触发
+    - cron: '0 1 * * *'   # 北京时间 09:00 (UTC 01:00)
+    - cron: '0 6 * * *'   # 北京时间 14:00 (UTC 06:00)
+    - cron: '0 14 * * *'  # 北京时间 22:00 (UTC 14:00)
+  workflow_dispatch:      # 支持手动点击运行测试
 
 jobs:
   run-news:
@@ -20,21 +20,19 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pip install requests schedule python-telegram-bot google-generativeai httpx
+          pip install requests httpx
       
       - name: Run news script
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PYTHONPATH: ${{ github.workspace }}/src
         run: |
           cat > config_runtime.json << EOF
           {
             "telegram_bot_token": "${{ secrets.TELEGRAM_TOKEN }}",
             "telegram_chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}",
-            "gemini_api_key": "${{ secrets.GEMINI_API_KEY }}",
-            "news_categories": ["crypto"],
-            "schedule_times": ["09:00", "14:00", "22:00"],
+            "news_categories": ["crypto", "tech", "finance"],
             "api_base_url": "https://ai.6551.io"
           }
           EOF
