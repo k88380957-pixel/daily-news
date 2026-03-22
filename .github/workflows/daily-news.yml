@@ -7,15 +7,19 @@ on:
     - cron: '0 14 * * *'  # 北京时间 22:00 (UTC 14:00)
   workflow_dispatch:      # 支持手动点击运行测试
 
+env:
+  # 显式开启 Node.js 24 运行环境，消除弃用警告
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   run-news:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4  # 升级到 v4 以支持更高版本的 Node.js
+        uses: actions/checkout@v4
       
       - name: Set up Python
-        uses: actions/setup-python@v5  # 升级到 v5 以支持更高版本的 Node.js
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       
