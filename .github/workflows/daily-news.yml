@@ -11,10 +11,11 @@ jobs:
   run-news:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4  # 升级到 v4 以支持更高版本的 Node.js
       
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5  # 升级到 v5 以支持更高版本的 Node.js
         with:
           python-version: '3.10'
       
