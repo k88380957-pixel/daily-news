@@ -1,0 +1,28 @@
+name: Crypto Daily News Summary
+
+on:
+  schedule:
+    # 每日 UTC 03:00（北京时间 11:00）运行脚本
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r daily-news/requirements.txt
+
+      - name: Run news summary script
+        run: python daily-news/main.py
