@@ -1,44 +1,28 @@
-name: Daily News
+name: Crypto Daily News Summary
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # 北京时间 09:00 (UTC 01:00)
-    - cron: '0 6 * * *'   # 北京时间 14:00 (UTC 06:00)
-    - cron: '0 14 * * *'  # 北京时间 22:00 (UTC 14:00)
-  workflow_dispatch:      # 支持手动点击运行测试
-
-env:
-  # 显式开启 Node.js 24 运行环境，消除弃用警告
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    # 每日 UTC 03:00（北京时间 11:00）运行脚本
+    - cron: "0 3 * * *"
+  workflow_dispatch:
 
 jobs:
-  run-news:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Set up Python
+
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-      
+          python-version: "3.11"
+          cache: 'pip'
+
       - name: Install dependencies
-        run: |
-          pip install requests httpx
-      
-      - name: Run news script
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          PYTHONPATH: ${{ github.workspace }}/src
-        run: |
-          cat > config_runtime.json << EOF
-          {
-            "telegram_bot_token": "${{ secrets.TELEGRAM_TOKEN }}",
-            "telegram_chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}",
-            "news_categories": ["crypto", "tech", "finance"],
-            "api_base_url": "https://ai.6551.io"
-          }
-          EOF
-          python src/daily_news_mcp/daily_news_runner.py
+        run: pip install -r daily-news/requirements.txt
+
+      - name: Run news summary script
+        run: python daily-news/main.py
